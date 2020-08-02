@@ -1,0 +1,42 @@
+export const first_names = [
+    'Olexander',
+    'Dmytro',
+    'Bogdan',
+    'Maksym',
+    'Artur',
+    'Sergii',
+    'Ignat',
+    'Evgenii',
+    'Mychailo',
+
+    'Olena',
+    'Katerina',
+    'Maryna',
+    'Viktoriya',
+    'Alina',
+    'Polina',
+    'Evgeniya',
+    'Olexandra',
+    'Masha',
+    'Karina',
+];
+
+export const last_names = [
+    'Mishenko',
+    'Ermolenko',
+    'Ostapenko',
+    'Borsh',
+    'Bondarenko',
+    'Maruenko',
+    'Lukianenko',
+    'Tyshenko',
+    'Dyachenko',
+    'Gvozdyk',
+    'Onychenko',
+    'Pusarchuk',
+    'Rubanyk',
+    'Ignatenko',
+    'Polychuk',
+    'Koval',
+];
+
