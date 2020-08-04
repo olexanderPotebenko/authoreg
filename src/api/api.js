@@ -13,6 +13,12 @@ export const userApi = {
                 headers:  id ? { authorize: token, id: id }: {} ,
             }).then(res => res.data);
     },
+    getUsersNoData() {
+
+        return instance.get(`users/`,
+            { }).then(res => res.data);
+    },
+
 };
 
 export const profileApi = {
