@@ -37,7 +37,6 @@ export const profileApi = {
             .then(res => res.data);
     },
     createPost ({id, token, post}) {
-        debugger;
         return instance.post(`profile/${id}/posts/`,
             post,
             { headers: {authorize: token, id, 'Content-Type': 'form/multipart'}, }
