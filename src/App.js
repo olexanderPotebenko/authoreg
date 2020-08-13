@@ -1,9 +1,11 @@
 import React from 'react';
-import './App.css';
-import {authApi, userApi, followApi, profileApi} from './api/api';
+import {connect} from 'react-redux';
+import styles from './App.css';
+import {getRandomItems, getRandomItemNumber} from './utils';
 import {first_names, last_names} from './templates/templates';
+import {getUsers, authUser, createUser, posted, subscribed} from './appReducer';
 
-const posts = require.context('./images', true, /\.png|.jpeg|.jpg$/);
+const posts = require.context('./images', true,); //\.png|.jpeg|.jpg$
 
 const postsObjArray = posts.keys()
     .map(key => ({
@@ -11,54 +13,33 @@ const postsObjArray = posts.keys()
         file: posts(key),
     })
     );
-
-console.log(postsObjArray);
+console.log('postsObjArray length = ' + postsObjArray.length);
 
 const password = '111111';
 
-let getRandomItemNumber = (arr) => {
-    return arr[Math.floor(arr.length * Math.random())];
-};
-
-let getRandomItems = (arr, factor = 55) => {
-    return arr.filter(item => Math.random() * 100 < factor);
-};
-
-let styles = {};
-
 class App extends React.Component {
 
-    state = {
-        users: null,
-    }
-
     onSetUsers = () => {
-        userApi.getUsersNoData()
-            .then(data => {
-                console.log(
-                    `-------------------------------\n
-                ---GETING USERS SUCCESSFULLY---\n
-                -------------------------------`);
-                this.setState({users: data.items});
-            });
+        this.props.getUsers();
     }
 
-    onSignIn = () => {
-        Promise.all(this.state.users.map(({email}) => {
-            return authApi.signIn({email, password})
-                .then(user => {
-                    console.log(user);
-                    return user
-                });
-        }) ).then(data => {
-            console.log(`\n ----SINGN IN ACKS SUCCESSFULLY---`);
-            this.setState({auth_users: data.map(data => data.data)});
+    onSignIn = async () => {
+
+        await new Promise(async resolve => {
+        for(let i = 0; i < this.props.users.length; i++) {
+            await this.props.authUser({
+                email: this.props.users[i].email, password: '111111'
+            });
+            if(i == this.props.users.length - 1) resolve();
+        };
         });
+
+        await console.log(`\n ----SINGN IN ACKS SUCCESSFULLY---`);
     }
 
     onCreateAcks = async () => {
 
-        for(let i = 0; i < 10; i++){
+        for(let i = 0; i < 1000; i++){
             let first_name = getRandomItemNumber(first_names);
             let last_name = getRandomItemNumber(last_names);
             let email = `${first_name}.${last_name}@gmail.com`.toLowerCase();
@@ -69,68 +50,64 @@ class App extends React.Component {
                 email,
             };
 
-            let user = await authApi.signUp(options);
-            console.log(user);
+            await this.props.createUser(options);
         };
     };
 
-    onSubscription = () => {
-        /*
-        this.state.auth_users.forEach((email, token, id) => {
-            getRandomItems(this.state.users).forEach( async (user) => {
-                let data = await followApi.follow({email, token, id, user_id: user.id})
-                console.log(data);
-            });
-        })
-        */
+    onSubscription = async () => {
 
-        this.state.auth_users.forEach(async user => {
-            await getRandomItems(this.state.users).forEach( async (item_user) => {
-                await followApi.follow({...user, user_id: item_user.id})
-                    .then(resolve => {
-                        console.log(resolve);
-                        return Promise.resolve(resolve);
-                    });
-            })
-        })
+        let users = this.props.auth_users;
+        for(let i = 0; i < users.length; i++) {
+            let user = users[i];
+
+            let target_users = getRandomItems(this.props.users);
+            for(let j = 0; j < target_users.length; j++) {
+                let target_user = target_users[j];
+
+                let options = {
+                    id: user.id,
+                    token: user.token,
+                    user_id: target_user.id,
+                };
+
+                await this.props.subscribed(options);
+           };
+        };
     }
 
-    onPosting = () => {
+    onPosting = async () => {
         let img = document.getElementById('post');
         let canvas = document.createElement('canvas');
 
-        this.state.auth_users.forEach(async (user, index) => {
+        let users = this.props.auth_users;
+        for(let i = 0; i< users.length; i++){
+            let user = users[i];
 
-            getRandomItems(postsObjArray, 50).forEach(async (post) => {
-                console.log(`User ${user.id} added post ${post.file}`);
+            let posts = getRandomItems(postsObjArray, 2);
+            for(let j = 0; j < posts.length; j ++){
+                let post = posts[j];
 
                 await new Promise( resolve => {
                     img.src = post.file;
                     setTimeout(() => {
                         // создаём <canvas> того же размера
                         resolve();
-                    }, 150);
-                });
+                    }, 50);
+                })
 
                 canvas.width = img.clientWidth;
                 canvas.height = img.clientHeight;
 
                 let context = canvas.getContext('2d');
 
-                // копируем изображение в  canvas (метод позволяет вырезать часть изображения)
                 context.drawImage(img, 0, 0);
-                // мы можем вращать изображение при помощи context.rotate() и делать множество других преобразований
-
-                // toBlob является асинхронной операцией, для которой callback-функция вызывается при завершении
 
                 let blob = await new Promise (resolve => {
-
                     canvas.toBlob((blob) => {
-
                         resolve(blob);
                     });
                 });
-                // после того, как Blob создан, загружаем его
+
                 let fd = new FormData();
                 fd.append('text', 'loh lohloh loh loh loh loh');
                 fd.append('image', blob, 'image.png');
@@ -140,14 +117,12 @@ class App extends React.Component {
                     token: user.token,
                     post: fd,
                 };
-                await profileApi.createPost(options);
-
-                // удаляем внутреннюю ссылку на Blob, что позволит браузеру очистить память
-            }, 'image/png');
-        });
+                await this.props.posted(options);
+                console.log(`User ${user.id} i = ${i} j = ${j}  added post ${post.file}`);
+            };
+        };
 
     }
-
 
     render() {
 
@@ -157,37 +132,42 @@ class App extends React.Component {
                     social network authoreg
                     <nav>
                         <div className={styles.button_wrp}>
-                            <button onClick={this.onSetUsers}>
+                            <button onClick={this.onSetUsers} >
                                 get users 
                             </button>
+                            {this.props.users.length}
                         </div>
                         <div className={styles.button_wrp}>
-                            <button onClick={this.onSignIn}>
+                            <button onClick={this.onSignIn}
+                                disabled={!this.props.users.length}>
                                 authorization 
                             </button>
+                            {this.props.auth_users.length}
                         </div>
                         <div className={styles.button_wrp}>
                             <button onClick={this.onCreateAcks}>
                                 create acks
                             </button>
+                            {this.props.created_users.length}
                         </div>
                         <div className={styles.button_wrp}>
-                            <button onClick={this.onSubscription}>
+                            <button onClick={this.onSubscription}
+                                disabled={!this.props.auth_users.length}>
                                 subscription
                             </button>
+                            {this.props.subscriptions.length}
                         </div>
                         <div className={styles.button_wrp}>
-                            <button onClick={this.onPosting} >
-                                posting
+                            <button onClick={this.onPosting}
+                                disabled={!this.props.auth_users.length}>
+                                posted
                             </button>
+                            {this.props.posts.length}
                         </div>
                         <div className={styles.button_wrp}>
                             <button>nothing</button>
                         </div>
-                        <div className={styles.button_wrp}>
-                            <button>nothing</button>
-                        </div>
-                        <div id='posting image'>
+                        <div id='posted image'>
                             <canvas id='canvas' visibility='hidden'/>
                             <img id='post' style={{ visibility: 'hidden', position: 'absolute' }}/>
                         </div>
@@ -198,4 +178,23 @@ class App extends React.Component {
     }
 }
 
-export default App;
+let mapStateToProps = state => {
+
+    return {
+        users: state.users,
+        auth_users: state.auth_users,
+        subscriptions: state.subscriptions,
+        posts: state.posts,
+        created_users: state.created_users,
+    }
+};
+
+let mapDispatchToProps = {
+    getUsers,
+    authUser,
+    createUser,
+    posted,
+    subscribed,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
