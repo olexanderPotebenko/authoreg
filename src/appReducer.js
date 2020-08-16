@@ -5,6 +5,7 @@ const SET_USERS = 'SET-USERS';
 const ADD_AUTH_USER = 'ADD-AUTH_USER';
 const ADD_SUBSCRIPTION = 'ADD-SUBSCRIPTION';
 const ADD_POST = 'ADD-POST';
+const ADD_LIKE = 'ADD-LIKE';
 
 let initial_state = {
     users: [],
@@ -12,6 +13,7 @@ let initial_state = {
     subscriptions: [],
     posts: [],
     created_users: [],
+    likes: [],
 };
 
 let appReducer = (state = initial_state, action) => {
@@ -42,6 +44,11 @@ let appReducer = (state = initial_state, action) => {
                 ...state,
                 posts: state.posts.concat(action.post),
             }
+        case ADD_LIKE:
+            return {
+                ...state,
+                likes: state.likes.concat(action.like),
+            }
         default: 
             return state;
     };
@@ -54,17 +61,19 @@ export let addAuthUsers = user => ({ type: ADD_AUTH_USER, user });
 export let addSubscription = subscription => ({ type: ADD_SUBSCRIPTION, subscription });
 export let addPost = post => ({ type: ADD_POST, post });
 export let addCreatedUsers = user => ({ type: ADD_CREATED_USER, user});
+export let addLike = like => ({ type: ADD_LIKE, like });
 
 // THUNKS
 
 export let createUser = options => dispatch => {
 
-    authApi.signUp(options)
+    return authApi.signUp(options)
         .then(data => {
+            console.log(data.message);
             if(data.result_code == 0) {
-                dispatch(addCreatedUsers(data.message));
+                return dispatch(addCreatedUsers(data.message));
             }else{
-                console.log(data.message);
+                return;
             }
         });
 };
@@ -81,39 +90,46 @@ export let getUsers = () => dispatch => {
 };
 
 export let authUser = options => dispatch => {
-    authApi.signIn(options)
+    return authApi.signIn(options)
         .then(data => {
             if(data.result_code == 0){
-                console.log(data.message);
-                dispatch(addAuthUsers(data.data));
+                console.log(data.data.id + ' is success authentification');
+                return dispatch(addAuthUsers(data.data));
             }else{
             };
         });
 };
 
 export let posted = options => dispatch => {
-    profileApi.createPost(options)
+    return profileApi.createPost(options)
         .then((data) => {
             if(data.result_code == 0) {
-                dispatch(addPost(data.massage));
+                return dispatch(addPost(data.massage));
             }else{
                 console.log(`missed`);
+                return;
             };
-            return Promise.resolve();
         });
 }
 
 export let subscribed = options => dispatch => {
-    followApi.follow(options)
+    return followApi.follow(options)
         .then(resolve => {
             if(resolve.result_code == 0){
-                dispatch(addSubscription(resolve.message));
+                return dispatch(addSubscription(resolve.message));
             }else{
                 console.log(resolve.message);
+                return;
             };
         });
 };
- 
+
+export let likedPost = options => dispatch => {
+    return profileApi.likedPost(options) 
+        .then(data => {
+            return dispatch(addLike(data.post));
+        });
+};
 
 export default appReducer;
 

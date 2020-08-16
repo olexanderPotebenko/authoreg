@@ -2,8 +2,9 @@ import React from 'react';
 import {connect} from 'react-redux';
 import styles from './App.css';
 import {getRandomItems, getRandomItemNumber} from './utils';
-import {first_names, last_names} from './templates/templates';
-import {getUsers, authUser, createUser, posted, subscribed} from './appReducer';
+import {profileApi} from './api/api';
+import * as templates from './templates/templates';
+import {getUsers, authUser, createUser, posted, subscribed, likedPost} from './appReducer';
 
 const posts = require.context('./images', true,); //\.png|.jpeg|.jpg$
 
@@ -25,44 +26,41 @@ class App extends React.Component {
 
     onSignIn = async () => {
 
-        await new Promise(async resolve => {
-        for(let i = 0; i < this.props.users.length; i++) {
-            await this.props.authUser({
-                email: this.props.users[i].email, password: '111111'
-            });
-            if(i == this.props.users.length - 1) resolve();
-        };
-        });
+        for(let user of this.props.users){
+            await this.props.authUser({email: user.email, password: '111111'});
+        }
 
-        await console.log(`\n ----SINGN IN ACKS SUCCESSFULLY---`);
+        console.log('AUTHORIZE ACCESS!!!!!!!!');
+
+        //await this.props.authUsers(this.props.users, '111111');
+
     }
 
     onCreateAcks = async () => {
 
-        for(let i = 0; i < 1000; i++){
-            let first_name = getRandomItemNumber(first_names);
-            let last_name = getRandomItemNumber(last_names);
+        let options_arr = [];
+        for(let i = 0; i < 50; i++){
+            let first_name = getRandomItemNumber(templates.first_names);
+            let last_name = getRandomItemNumber(templates.last_names);
             let email = `${first_name}.${last_name}@gmail.com`.toLowerCase();
-            let options = {
-                first_name,
-                last_name,
-                password, 
-                email,
-            };
+            let options = { first_name, last_name, password, email, };
 
+            options_arr.push(options);
+        };
+
+        for(let options of options_arr){
             await this.props.createUser(options);
         };
+        console.log(`CREATE ${1000} ACKS SUCCESS!`);
     };
 
     onSubscription = async () => {
 
         let users = this.props.auth_users;
-        for(let i = 0; i < users.length; i++) {
-            let user = users[i];
+        for(let user of users) {
 
             let target_users = getRandomItems(this.props.users);
-            for(let j = 0; j < target_users.length; j++) {
-                let target_user = target_users[j];
+            for(let target_user of target_users) {
 
                 let options = {
                     id: user.id,
@@ -80,12 +78,10 @@ class App extends React.Component {
         let canvas = document.createElement('canvas');
 
         let users = this.props.auth_users;
-        for(let i = 0; i< users.length; i++){
-            let user = users[i];
+        for(let user of users){
 
-            let posts = getRandomItems(postsObjArray, 2);
-            for(let j = 0; j < posts.length; j ++){
-                let post = posts[j];
+            let posts = getRandomItems(postsObjArray, 1);
+            for(let post of posts){
 
                 await new Promise( resolve => {
                     img.src = post.file;
@@ -109,7 +105,9 @@ class App extends React.Component {
                 });
 
                 let fd = new FormData();
-                fd.append('text', 'loh lohloh loh loh loh loh');
+                let text = getRandomItems(templates.text.split(' '), 20).join(' ');
+                debugger;
+                fd.append('text',  text);
                 fd.append('image', blob, 'image.png');
 
                 let options = {
@@ -118,7 +116,28 @@ class App extends React.Component {
                     post: fd,
                 };
                 await this.props.posted(options);
-                console.log(`User ${user.id} i = ${i} j = ${j}  added post ${post.file}`);
+                console.log(`User ${user.id}  added post ${post.file}`);
+            };
+        };
+
+    }
+
+    onLiking = async () => {
+        for(let user of this.props.auth_users){
+            let target_users = getRandomItems(this.props.users);
+            for(let target_user of target_users){
+                let target_posts = await profileApi.getPosts({user_id: target_user.id});
+                target_posts = target_posts.posts;
+                target_posts = getRandomItems(target_posts, 50);
+                for(let post of target_posts){
+                    let options = {
+                        id: user.id,
+                        token: user.token,
+                        user_id: target_user.id,
+                        post_id: post.id,
+                    };
+                    await this.props.likedPost(options);
+                };
             };
         };
 
@@ -165,7 +184,11 @@ class App extends React.Component {
                             {this.props.posts.length}
                         </div>
                         <div className={styles.button_wrp}>
-                            <button>nothing</button>
+                            <button onClick={this.onLiking}
+                                disabled={!this.props.auth_users.length}>
+                                liking
+                            </button>
+                            {this.props.likes.length}
                         </div>
                         <div id='posted image'>
                             <canvas id='canvas' visibility='hidden'/>
@@ -186,6 +209,7 @@ let mapStateToProps = state => {
         subscriptions: state.subscriptions,
         posts: state.posts,
         created_users: state.created_users,
+        likes: state.likes,
     }
 };
 
@@ -195,6 +219,7 @@ let mapDispatchToProps = {
     createUser,
     posted,
     subscribed,
+    likedPost,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(App);
