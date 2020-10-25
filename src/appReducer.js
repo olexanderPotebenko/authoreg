@@ -6,6 +6,7 @@ const ADD_AUTH_USER = 'ADD-AUTH_USER';
 const ADD_SUBSCRIPTION = 'ADD-SUBSCRIPTION';
 const ADD_POST = 'ADD-POST';
 const ADD_LIKE = 'ADD-LIKE';
+const ADD_NEW_INFO = 'ADD-NEW-INFO';
 
 let initial_state = {
     users: [],
@@ -14,6 +15,7 @@ let initial_state = {
     posts: [],
     created_users: [],
     likes: [],
+    update_info: [],
 };
 
 let appReducer = (state = initial_state, action) => {
@@ -44,6 +46,11 @@ let appReducer = (state = initial_state, action) => {
                 ...state,
                 posts: state.posts.concat(action.post),
             }
+        case ADD_NEW_INFO: 
+            return {
+                ...state,
+                update_info: state.update_info.concat(action.update_info),
+            }
         case ADD_LIKE:
             return {
                 ...state,
@@ -62,6 +69,7 @@ export let addSubscription = subscription => ({ type: ADD_SUBSCRIPTION, subscrip
 export let addPost = post => ({ type: ADD_POST, post });
 export let addCreatedUsers = user => ({ type: ADD_CREATED_USER, user});
 export let addLike = like => ({ type: ADD_LIKE, like });
+export let addUpdateInfo = update_info => ({ type: ADD_NEW_INFO, update_info });
 
 // THUNKS
 
@@ -105,6 +113,18 @@ export let posted = options => dispatch => {
         .then((data) => {
             if(data.result_code == 0) {
                 return dispatch(addPost(data.massage));
+            }else{
+                console.log(`missed`);
+                return;
+            };
+        });
+}
+
+export let updateProfile = options => dispatch => {
+    return profileApi.updateProfile(options)
+        .then((data) => {
+            if(data.result_code == 0) {
+                return dispatch(addUpdateInfo(data.massage));
             }else{
                 console.log(`missed`);
                 return;

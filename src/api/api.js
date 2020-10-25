@@ -60,6 +60,16 @@ export const profileApi = {
             token: this.props.auth.token,
             post_id: this.props.post.id,
             */
+    updateProfile ({id, token, formData}) {
+
+        debugger;
+        return instance.put(`profile/${id}/update`,
+            formData,
+            { headers: {authorize: token, id}, })
+            .then(res => {
+                return res.data;
+            });
+    },
 
                 
 };

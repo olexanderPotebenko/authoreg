@@ -4,9 +4,10 @@ import styles from './App.css';
 import {getRandomItems, getRandomItemNumber} from './utils';
 import {profileApi} from './api/api';
 import * as templates from './templates/templates';
-import {getUsers, authUser, createUser, posted, subscribed, likedPost} from './appReducer';
+import {getUsers, authUser, createUser, posted, subscribed, likedPost, updateProfile} from './appReducer';
 
-const posts = require.context('./images', true,); //\.png|.jpeg|.jpg$
+const posts = require.context('./images/posts', true,); //\.png|.jpeg|.jpg$
+const avatars = require.context('./images/avatars', true,); //\.png|.jpeg|.jpg$
 
 const postsObjArray = posts.keys()
     .map(key => ({
@@ -15,6 +16,14 @@ const postsObjArray = posts.keys()
     })
     );
 console.log('postsObjArray length = ' + postsObjArray.length);
+
+const avatarsObjArray = avatars.keys()
+    .map(key => ({
+        path: key,
+        file: avatars(key),
+    })
+    );
+console.log('postsObjArray length = ' + avatars.length);
 
 const password = '111111';
 
@@ -122,6 +131,63 @@ class App extends React.Component {
 
     }
 
+    onUpdatingInfo = async () => {
+        let img = document.getElementById('avatar');
+        let canvas = document.createElement('canvas');
+
+        let users = this.props.auth_users;
+        for(let user of users){
+
+            let avatar = getRandomItemNumber(avatarsObjArray, 1);
+
+            await new Promise( resolve => {
+                img.src = avatar.file;
+                setTimeout(() => {
+                    // создаём <canvas> того же размера
+                    resolve();
+                }, 150);
+            })
+
+            canvas.width = img.clientWidth;
+            canvas.height = img.clientHeight;
+
+            let context = canvas.getContext('2d');
+
+            context.drawImage(img, 0, 0);
+
+            let blob = await new Promise (resolve => {
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                });
+            });
+
+            let fd = new FormData();
+            let phone = '+380956098733',
+                address = 'Lviv',
+                age = 25;
+
+            //
+            if(phone)
+                fd.append('phone', phone);
+            if(address)
+                fd.append('address', address);
+            if(age)
+                fd.append('age', age);
+            fd.append('image', blob, 'image.png');
+
+            debugger;
+
+            let options = {
+                id: user.id, 
+                token: user.token,
+                formData: fd,
+            };
+            await this.props.updateProfile(options);
+            console.log(`User ${user.id}  added post ${avatar.file}`);
+        };
+
+    }
+
     onLiking = async () => {
         for(let user of this.props.auth_users){
             let target_users = getRandomItems(this.props.users);
@@ -184,6 +250,14 @@ class App extends React.Component {
                             {this.props.posts.length}
                         </div>
                         <div className={styles.button_wrp}>
+                            <button onClick={this.onUpdatingInfo}
+                                disabled={!this.props.auth_users.length}>
+                               change info 
+                            </button>
+                            {this.props.update_info.length}
+                        </div>
+
+                        <div className={styles.button_wrp}>
                             <button onClick={this.onLiking}
                                 disabled={!this.props.auth_users.length}>
                                 liking
@@ -194,9 +268,21 @@ class App extends React.Component {
                             <canvas id='canvas' visibility='hidden'/>
                             <img id='post' style={{ visibility: 'hidden', position: 'absolute' }}/>
                         </div>
-                    </nav>
-                </div>
-            </div>
+                        <div id='update info'>
+                            <canvas id='canvas_avatar' 
+                                style={{
+                                    visibility: 'hidden',
+                                    position: 'absolute' }}
+                            />
+                                    <img id='avatar'
+                                        style={{
+                                            visibility: 'hidden',
+                                            position: 'absolute' }}
+                                    />
+                                        </div>
+                                    </nav>
+                                </div>
+                            </div>
         );
     }
 }
@@ -210,6 +296,7 @@ let mapStateToProps = state => {
         posts: state.posts,
         created_users: state.created_users,
         likes: state.likes,
+        update_info: state.update_info,
     }
 };
 
@@ -220,6 +307,7 @@ let mapDispatchToProps = {
     posted,
     subscribed,
     likedPost,
+    updateProfile,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(App);
